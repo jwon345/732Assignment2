@@ -6,6 +6,12 @@ module cruiseController:
   input Brake : float;  
   input Speed : float;  
 
+  constant SpeedMin : float;
+  constant SpeedMax : float;
+  constant SpeedInc : float;
+  constant ThrottleSatMax : float;
+  constant PedalsMin : float;
+
   output CruiseSpeed : float;
   output ThrottleCmd : float;
   output CruiseState : integer; % 0 OFF, 1 ON, 2 STANDBY, 3 DISABLE 
@@ -21,30 +27,27 @@ module cruiseController:
     %Cruise Control System
     [loop
       pause; % needed for loop
+      trap T in
+        present(Off) then
+          emit CruiseState(0); 
+          exit T
+        else
+          present(On) then
+            emit CruiseState(1); % when off is not set And on is pressed then cruise will be on
+            if ?Speed > SpeedMin and ?Speed < SpeedMax and ?Accel < pedalsMin and !Brake then
+              emit CruiseState(1); % cruise state will be off when off is set
+              exit T
+            else
+              emit CruiseState(3); % Disable
+              exit T
+          end if
+          end present
+        end present
+  
+        
 
+      end trap
       % Button Manager
-      present(Off) then
-          if Speed > 40 and Speed < 150 and !Accel  then
-            emit CruiseState(0); % cruise state will be off when off is set
-          else
-            emit CruiseState(3); % Disable
-        end if
-      else
-        present(On) then
-          emit CruiseState(1); % when off is not set And on is pressed then cruise will be on
-        end
-      end
-
-      ||
-
-      await state = 3 || Speed > 40 || Speed < 150 || !Accel; %waiting for standby mode
-      
-      ||
-
-      await immediate Brake
-        emit CruiseState(2)
-       
-      
     end loop]
     ||
     [
