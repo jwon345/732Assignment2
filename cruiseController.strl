@@ -13,8 +13,7 @@ module cruiseController:
     emit CruiseState(0); %init the cruise state to OFF
     pause; %pause to allow for initialising
     
-    [
-    loop
+    [loop
       present(off) then
         emit CruiseState(0); % cruise state will be off when off is set
       else
@@ -22,8 +21,7 @@ module cruiseController:
           emit CruiseState(1); % when off is not set And on is pressed then cruise will be on
         end
       end
-    end loop
-    ]
+    end loop]
 
 end module
 
