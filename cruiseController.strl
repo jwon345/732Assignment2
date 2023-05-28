@@ -1,5 +1,4 @@
-
-%Cruise controller
+%Cuise controller
 
 module cruiseController:
   input On, Off, Resume, Set, QuickDecel, QuickAccel;
@@ -13,15 +12,14 @@ module cruiseController:
     
     emit CruiseState(0); %init the cruise state to OFF
        
+    pause;
+      
     present(On) then
       emit CruiseState(1); % cruise state to on when button pressed.
     else
       emit CruiseState(0);
     end
 
-     
-  
-
-
 end module
+
 
