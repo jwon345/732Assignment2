@@ -18,22 +18,40 @@ module cruiseController:
     emit testing(0); %init the cruise state to OFF
     pause; %pause to allow for initialising
     
+    %Cruise Control System
     [loop
       pause; % needed for loop
+
+      % Button Manager
       present(Off) then
-        emit CruiseState(0); % cruise state will be off when off is set
+          if Speed > 40 and Speed < 150 and !Accel  then
+            emit CruiseState(0); % cruise state will be off when off is set
+          else
+            emit CruiseState(3); % Disable
+        end if
       else
         present(On) then
           emit CruiseState(1); % when off is not set And on is pressed then cruise will be on
         end
       end
+
+      ||
+
+      await state = 3 || Speed > 40 || Speed < 150 || !Accel; %waiting for standby mode
+      
+      ||
+
+      await immediate Brake
+        emit CruiseState(2)
+       
+      
     end loop]
     ||
     [
     loop
       pause;
       emit testing(pre(?testing) + 1);
-      run testRun[signal testing/testInput; signal testingOutput/testingModuleOutput];
+      %run testRun[signal testing/testInput; signal testingOutput/testingModuleOutput];
     end loop
     ]
 
