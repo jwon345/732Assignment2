@@ -1,0 +1,27 @@
+
+%Cruise controller
+
+module cruiseController:
+  input On, Off, Resume, Set, QuickDecel, QuickAccel;
+  input Accel : float;  
+  input Brake : float;  
+  input Speed : float;  
+
+  output CruiseSpeed : float;
+  output ThrottleCmd : float;
+  output CruiseState : integer; % 0 OFF, 1 ON, 2 STANDBY, 3 DISABLE 
+    
+    emit CruiseState(0); %init the cruise state to OFF
+       
+    present(On) then
+      emit CruiseState(1); % cruise state to on when button pressed.
+    else
+      emit CruiseState(0);
+    end
+
+     
+  
+
+
+end module
+
