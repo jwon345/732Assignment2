@@ -9,20 +9,40 @@ module cruiseController:
   output CruiseSpeed : float;
   output ThrottleCmd : float;
   output CruiseState : integer; % 0 OFF, 1 ON, 2 STANDBY, 3 DISABLE 
+
+
+  output testing : integer; % 0 OFF, 1 ON, 2 STANDBY, 3 DISABLE 
+  output testingModuleOutput : integer; % 0 OFF, 1 ON, 2 STANDBY, 3 DISABLE 
     
     emit CruiseState(0); %init the cruise state to OFF
+    emit testing(0); %init the cruise state to OFF
     pause; %pause to allow for initialising
     
     [loop
-      present(off) then
+      pause; % needed for loop
+      present(Off) then
         emit CruiseState(0); % cruise state will be off when off is set
       else
-        present(on) then
+        present(On) then
           emit CruiseState(1); % when off is not set And on is pressed then cruise will be on
         end
       end
     end loop]
+    ||
+    [
+    loop
+      pause;
+      emit testing(pre(?testing) + 1);
+      run testRun[signal testing/testInput; signal testingOutput/testingModuleOutput];
+    end loop
+    ]
 
 end module
 
+module testRun:
+  input testInput : integer
+  output testOutput : integer 
 
+  emit testOutput(?testInput + 5);
+end module
+ 
