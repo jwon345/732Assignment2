@@ -11,14 +11,19 @@ module cruiseController:
   output CruiseState : integer; % 0 OFF, 1 ON, 2 STANDBY, 3 DISABLE 
     
     emit CruiseState(0); %init the cruise state to OFF
-       
-    pause;
-      
-    present(On) then
-      emit CruiseState(1); % cruise state to on when button pressed.
-    else
-      emit CruiseState(0);
-    end
+    pause; %pause to allow for initialising
+    
+    [
+    loop
+      present(off) then
+        emit CruiseState(0); % cruise state will be off when off is set
+      else
+        present(on) then
+          emit CruiseState(1); % when off is not set And on is pressed then cruise will be on
+        end
+      end
+    end loop
+    ]
 
 end module
 
