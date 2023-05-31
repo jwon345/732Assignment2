@@ -19,51 +19,60 @@ module cruiseController:
 
   output testing : integer; % 0 OFF, 1 ON, 2 STANDBY, 3 DISABLE 
   output testingModuleOutput : integer; % 0 OFF, 1 ON, 2 STANDBY, 3 DISABLE 
+
     
     emit CruiseState(0); %init the cruise state to OFF
     emit testing(0); %init the cruise state to OFF
+
     pause; %pause to allow for initialising
     
+signal AllowCC := 0 : integer in  % 0 = not enable, 1 = Disable mode, 2 = Break -> standby
     %Cruise Control System
     [loop
       pause; % needed for loop
-      trap T in
         present(Off) then
-          emit CruiseState(0); 
-          exit T
+          emit CruiseState(0); %cruise controll is off when off is set
         else
-          present(On) then
-            emit CruiseState(1); % when off is not set And on is pressed then cruise will be on
-            if ?Speed > SpeedMin and ?Speed < SpeedMax and ?Accel < pedalsMin and !Brake then
-              emit CruiseState(1); % cruise state will be off when off is set
-              exit T
-            else
-              emit CruiseState(3); % Disable
-              exit T
-          end if
-          end present
+		if pre(?CruiseState) = 1 then
+		    if pre(?AllowCC) = 2 then
+			emit CruiseState(2); % Standby from brakes
+			await Resume;
+			emit CruiseState(1); % return to on
+		    %elsif pre(?AllowCC) = 0 then
+		elsif pre(?CruiseState) = 3 then
+		    await (?AllowCC = 1)				
+			emit CruiseState(1)
+		    end if
+		else	
+		  present(On) then
+		    if ?AllowCC = 1 then
+		      emit CruiseState(1); % cruise state will be off when off is set
+		    else
+		      emit CruiseState(3); % cruise state will be Disabled when not meeting requirements
+		    end if
+		  end present
+		end if
         end present
-  
-        
-
-      end trap
       % Button Manager
     end loop]
     ||
-    [
+    [% state decision looker
     loop
-      pause;
-      emit testing(pre(?testing) + 1);
-      %run testRun[signal testing/testInput; signal testingOutput/testingModuleOutput];
+	pause;
+	      if ?Brake > PedalsMin then
+		if ?CruiseState = 1 then
+			emit AllowCC(2);
+			await Resume;
+		end if
+	      elsif ?Speed > SpeedMin and ?Speed < SpeedMax and ?Accel < PedalsMin and ?Brake < PedalsMin then
+		emit AllowCC(1);
+	      else
+		emit AllowCC(0);
+	      end if 
+	      %emit testing(pre(?testing) + 1);
+	      %run testRun[signal testing/testInput; signal testingOutput/testingModuleOutput];
     end loop
     ]
+end signal 
 
 end module
-
-module testRun:
-  input testInput : integer
-  output testOutput : integer 
-
-  emit testOutput(?testInput + 5);
-end module
- 
