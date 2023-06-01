@@ -16,20 +16,13 @@ module cruiseController:
   output ThrottleCmd : float;
   output CruiseState : integer; % 0 OFF, 1 ON, 2 STANDBY, 3 DISABLE 
 
-
-  output testing : integer; % 0 OFF, 1 ON, 2 STANDBY, 3 DISABLE 
-  output testingModuleOutput : integer; % 0 OFF, 1 ON, 2 STANDBY, 3 DISABLE 
-
     
     emit CruiseState(0); %init the cruise state to OFF
-    emit testing(0); %init the cruise state to OFF
-
-    pause; %pause to allow for initialising
     
-signal AllowCC := 0 : integer in  % 0 = not enable, 1 = Disable mode, 2 = Break -> standby
+signal AllowCC := 0 : integer, safeTrigger in  % AllowCC 0 = not enable, 1 = Disable mode, 2 = Break -> standby
     %Cruise Control System
     [loop
-      pause; % needed for loop
+	pause;
         present(Off) then
           emit CruiseState(0); %cruise controll is off when off is set
         else
@@ -38,11 +31,15 @@ signal AllowCC := 0 : integer in  % 0 = not enable, 1 = Disable mode, 2 = Break 
 			emit CruiseState(2); % Standby from brakes
 			await Resume;
 			emit CruiseState(1); % return to on
-		    %elsif pre(?AllowCC) = 0 then
-		elsif pre(?CruiseState) = 3 then
-		    await (?AllowCC = 1)				
-			emit CruiseState(1)
+		    elsif pre(?AllowCC) = 0 then
+			emit CruiseState(3);
+			await safeTrigger;
+			emit CruiseState(1);
 		    end if
+		elsif pre(?CruiseState) = 3 then
+			%?AllowCC = 1;			
+			await safeTrigger;
+			emit CruiseState(1);
 		else	
 		  present(On) then
 		    if ?AllowCC = 1 then
@@ -66,13 +63,21 @@ signal AllowCC := 0 : integer in  % 0 = not enable, 1 = Disable mode, 2 = Break 
 		end if
 	      elsif ?Speed > SpeedMin and ?Speed < SpeedMax and ?Accel < PedalsMin and ?Brake < PedalsMin then
 		emit AllowCC(1);
+		emit safeTrigger;
 	      else
-		emit AllowCC(0);
+		emit AllowCC(0); % Disable state
+		if pre(?CruiseState) = 1 then
+			emit CruiseState(3);
+		end if	
 	      end if 
-	      %emit testing(pre(?testing) + 1);
-	      %run testRun[signal testing/testInput; signal testingOutput/testingModuleOutput];
     end loop
     ]
+
 end signal 
 
 end module
+
+module SpeedController:
+input isCruiseControlOn : integer;
+
+end module 
