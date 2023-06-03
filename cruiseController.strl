@@ -15,18 +15,10 @@ module cruiseController:
   output CruiseSpeed : float;
   output ThrottleCmd : float;
   output CruiseState : integer; % 0 OFF, 1 ON, 2 STANDBY, 3 DISABLE 
-
-%this is just for temporary testing
-  output isCruiseControllerOn;
-  output moduleRelay;
-
     
   emit CruiseState(0); %init the cruise state to OFF
-    
-  signal AllowCC := 0 : integer, safeTrigger in  % AllowCC 0 = not enable, 1 = Disable mode, 2 = Break -> standby
-      %Cruise Control System
 
-      [loop
+      loop
         pause;
         trap A in 
 
@@ -84,7 +76,7 @@ module cruiseController:
             end if;
             emit CruiseState(2); 
             exit A;
-          end if 
+          end if; 
 
           if pre(?CruiseState) = 3 then 
 
@@ -101,30 +93,9 @@ module cruiseController:
 
             emit CruiseState(3); 
             exit A;
-          end if 
+          end if;
 
         end trap
-      end loop]
-      ||
-      run SpeedController[
-      signal isCruiseControllerOn/ccOn;
-      signal moduleRelay/relay
-      ]
-
-  end signal 
+      end loop
 
 end module
-
-module SpeedController:
-input ccOn; 
-output relay; 
-
-
-
-  loop 
-  pause;
-   present ccOn then
-    
-  end present
-  end loop
-end module 
