@@ -94,6 +94,7 @@ module SpeedController:
 input ccOn; 
 output relay; 
   loop 
+  pause;
    present ccOn then
     emit relay;
   end present
