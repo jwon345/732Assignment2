@@ -16,10 +16,14 @@ module cruiseController:
   output ThrottleCmd : float;
   output CruiseState : integer; % 0 OFF, 1 ON, 2 STANDBY, 3 DISABLE 
 
+%this is just for temporary testing
+  output isCruiseControllerOn;
+  output moduleRelay;
+
     
     emit CruiseState(0); %init the cruise state to OFF
     
-signal AllowCC := 0 : integer, safeTrigger in  % AllowCC 0 = not enable, 1 = Disable mode, 2 = Break -> standby
+signal AllowCC := 0 : integer, safeTrigger in  % AllowCC 0 =  Disable, 1 = enable , 2 = Break -> standby
     %Cruise Control System
     [loop
 	pause;
@@ -28,13 +32,16 @@ signal AllowCC := 0 : integer, safeTrigger in  % AllowCC 0 = not enable, 1 = Dis
         else
 		if pre(?CruiseState) = 1 then
 		    if pre(?AllowCC) = 2 then
-			emit CruiseState(2); % Standby from brakes
-			await Resume;
-			emit CruiseState(1); % return to on
+          emit CruiseState(2); % Standby from brakes
+          await Resume;
+          emit CruiseState(1); % return to on
 		    elsif pre(?AllowCC) = 0 then
-			emit CruiseState(3);
-			await safeTrigger;
-			emit CruiseState(1);
+          emit CruiseState(3);
+          await safeTrigger;
+          emit CruiseState(1);
+		    elsif pre(?AllowCC) = 1 then % when curisecontrol is enabled
+		      emit CruiseState(1); % cruise state will be On
+          emit isCruiseControllerOn; % this one feed into the module
 		    end if
 		elsif pre(?CruiseState) = 3 then
 			%?AllowCC = 1;			
@@ -43,7 +50,8 @@ signal AllowCC := 0 : integer, safeTrigger in  % AllowCC 0 = not enable, 1 = Dis
 		else	
 		  present(On) then
 		    if ?AllowCC = 1 then
-		      emit CruiseState(1); % cruise state will be off when off is set
+		      emit CruiseState(1); % cruise state will be On
+          emit isCruiseControllerOn; % this one feed into the module
 		    else
 		      emit CruiseState(3); % cruise state will be Disabled when not meeting requirements
 		    end if
@@ -72,12 +80,22 @@ signal AllowCC := 0 : integer, safeTrigger in  % AllowCC 0 = not enable, 1 = Dis
 	      end if 
     end loop
     ]
+    ||
+    run SpeedController[
+    signal isCruiseControllerOn/ccOn;
+    signal relay/moduleRelay;
+    ]
 
 end signal 
 
 end module
 
+%this module will call the external C function to control speed.
 module SpeedController:
-input isCruiseControlOn : integer;
-
+input ccOn; 
+input relay; 
+  loop 
+   present ccOn then
+    emit relay;
+  end present
 end module 
