@@ -141,28 +141,34 @@ module cruiseController:
       ]     
       ||
       [
-        loop
-            pause;
-            trap C in
-                if ?CruiseState = 1 then
+        var previous := 1 : integer in 
+          loop
+              pause;
+              trap C in
+                  if ?CruiseState = 1 then
+                    emit ThrottleCmd(?Accel);
+                    previous := 1;
+                    exit C;
+                  end if;
+
+                  if ((?CruiseState = 2) and (?previous) = 1)) then
+                    emit ThrottleCmd(regulateThrottle(1, ?CruiseSpeed, ?Speed));
+                    previous := 2;
+                    exit C;
+                  end if;
+
+                  if ?CruiseState = 2 then
+                    emit ThrottleCmd(regulateThrottle(0, ?CruiseSpeed, ?Speed));
+                    exit C;
+                  end if;
+
+                  
+                  previous := 1;
                   emit ThrottleCmd(?Accel);
                   exit C;
-                end if;
-
-                if ((?CruiseState = 2) and (pre(?CruiseState) = 1)) then
-                  emit ThrottleCmd(regulateThrottle(1, ?CruiseSpeed, ?Speed));
-                  exit C;
-                end if;
-
-                if ?State_driving = 2 then
-                  emit ThrottleCmd(regulateThrottle(0, ?CruiseSpeed, ?Speed));
-                  exit C;
-                end if;
-
-                emit ThrottleCmd(?Accel);
-                exit C;
-            end trap
-        end loop
+              end trap
+          end loop
+        end var
       ]
       
 
