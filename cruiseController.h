@@ -4,3 +4,5 @@ float SpeedInc = 2.5f;
 float ThrottleSatMax = 45.f;
 float PedalsMin = 3.f;
 
+float regulateThrottle(int isGoingOn, float cruiseSpeed, float vehicleSpeed);
+

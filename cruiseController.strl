@@ -147,17 +147,17 @@ module cruiseController:
                 if ?CruiseState = 1 then
                   emit ThrottleCmd(?Accel);
                   exit C;
-                end if
+                end if;
 
                 if ((?CruiseState = 2) and (pre(?CruiseState) = 1)) then
-                  emit ThrottleCmd(regulateThrottle(ThrottleSatMax, ?CruiseSpeed, ?Speed));
+                  emit ThrottleCmd(regulateThrottle(1, ?CruiseSpeed, ?Speed));
                   exit C;
-                end if
+                end if;
 
                 if ?State_driving = 2 then
                   emit ThrottleCmd(regulateThrottle(0, ?CruiseSpeed, ?Speed));
                   exit C;
-                end if
+                end if;
 
                 emit ThrottleCmd(?Accel);
                 exit C;
