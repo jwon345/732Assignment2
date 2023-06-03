@@ -79,8 +79,8 @@ signal AllowCC := 0 : integer, safeTrigger in  % AllowCC 0 = not enable, 1 = Dis
     ]
     ||
     run SpeedController[
-    signal IsCruiseControllerOn/ccOn;
-    signal relay/moduleRelay;
+    signal isCruiseControllerOn/ccOn;
+    signal relay/moduleRelay
     ]
 
 end signal 
@@ -93,6 +93,6 @@ input relay;
   loop 
    present ccOn then
     emit relay;
-   end if
-  end loop;
+  end present
+  end loop
 end module 
