@@ -33,16 +33,16 @@ module cruiseController:
           present(Off) then %takes priority over everything
             emit CruiseState(0); %cruise controll is prioritiesed and sets to 0 
             exit A;
-          end present
+          end present;
 
           if pre(?CruiseState) = 0 then
             present(On) then % Only switch on from Off
               emit CruiseState(1); %cruise controll is off when off is set
               exit A;
-            end present
+            end present;
             emit CruiseState(0);
             exit A;
-          end if 
+          end if;
 
           if pre(?CruiseState) = 1 then
             
@@ -50,26 +50,26 @@ module cruiseController:
             if (?Break > PedalsMin) then
               emit CruiseState(2);
               exit A;
-            end if 
+            end if; 
 
             % State On -> Disable 
             if (?Speed > SpeedMax) then
               emit CruiseState(3);
               exit A;
-            end if 
+            end if; 
             if (?Speed < SpeedMin) then
               emit CruiseState(3);
               exit A;
-            end if 
+            end if; 
             if (?Accel > PedalsMin) then
               emit CruiseState(3);
               exit A;
-            end if 
+            end if; 
 
             emit CruiseState(1); 
             exit A;
 
-          end if 
+          end if;
 
           if pre(?CruiseState) = 2 then
             
@@ -81,7 +81,7 @@ module cruiseController:
                 emit CruiseState(3); % State Standby -> Disable 
                 exit A;
               end if 
-            
+            end if;
             emit CruiseState(2); 
             exit A;
           end if 
