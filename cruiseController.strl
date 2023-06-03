@@ -15,6 +15,8 @@ module cruiseController:
   output CruiseSpeed : float;
   output ThrottleCmd : float;
   output CruiseState : integer; % 0 OFF, 1 ON, 2 STANDBY, 3 DISABLE 
+
+  function regulateThrottle(integer, float, float) : float;
     
   emit CruiseState(0); %init the cruise state to OFF
 
@@ -113,11 +115,11 @@ module cruiseController:
 
             present(QuickAccel) then
               heldCruiseSpeed := heldCruiseSpeed + SpeedInc;
-            end present
+            end present;
 
-            present(QuickAccel) then
-              heldCruiseSpeed = heldCruiseSpeed - SpeedInc;
-            end present
+            present(QuickDecel) then
+              heldCruiseSpeed := heldCruiseSpeed - SpeedInc;
+            end present;
 
             present(Set) then
               heldCruiseSpeed := ?Speed;
@@ -125,11 +127,11 @@ module cruiseController:
 
             if heldCruiseSpeed < SpeedMin then
               heldCruiseSpeed := SpeedMin;
-            end if
+            end if;
 
             if heldCruiseSpeed > SpeedMax then
               heldCruiseSpeed := SpeedMax;
-            end if
+            end if;
 
             emit CruiseSpeed(heldCruiseSpeed);
 
@@ -137,6 +139,31 @@ module cruiseController:
         end loop
       end var
       ]     
+      ||
+      [
+        loop
+            pause;
+            trap C in
+                if ?CruiseState = 1 then
+                  emit ThrottleCmd(?Accel);
+                  exit C;
+                end if
+
+                if ((?CruiseState = 2) and (pre(?CruiseState) = 1)) then
+                  emit ThrottleCmd(regulateThrottle(ThrottleSatMax, ?CruiseSpeed, ?Speed));
+                  exit C;
+                end if
+
+                if ?State_driving = 2 then
+                  emit ThrottleCmd(regulateThrottle(0, ?CruiseSpeed, ?Speed));
+                  exit C;
+                end if
+
+                emit ThrottleCmd(?Accel);
+                exit C;
+            end trap
+        end loop
+      ]
       
 
 end module
