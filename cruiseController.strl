@@ -39,7 +39,7 @@ module cruiseController:
           if pre(?CruiseState) = 1 then
             
             % State On -> standby
-            if (?Break > PedalsMin) then
+            if (?Brake > PedalsMin) then
               emit CruiseState(2);
               exit A;
             end if; 
@@ -65,14 +65,14 @@ module cruiseController:
 
           if pre(?CruiseState) = 2 then
             
-            if ?Break < PedalsMin then
+            if ?Brake < PedalsMin then
               if ?Speed > SpeedMin and ?Speed < SpeedMax and ?Accel < PedalsMin and ?Brake < PedalsMin then
                 emit CruiseState(1); % State Standby -> On
                 exit A;
               else
                 emit CruiseState(3); % State Standby -> Disable 
                 exit A;
-              end if 
+              end if;
             end if;
             emit CruiseState(2); 
             exit A;
@@ -81,15 +81,15 @@ module cruiseController:
           if pre(?CruiseState) = 3 then 
 
             % State Disable -> standby
-            if (?Break > PedalsMin) then
+            if (?Brake > PedalsMin) then
               emit CruiseState(2);
               exit A;
-            end if 
+            end if;
             
             if ?Speed > SpeedMin and ?Speed < SpeedMax and ?Accel < PedalsMin and ?Brake < PedalsMin then
               emit CruiseState(1); % State Disable -> On
               exit A;
-            end if
+            end if;
 
             emit CruiseState(3); 
             exit A;
