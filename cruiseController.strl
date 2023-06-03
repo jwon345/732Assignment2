@@ -102,22 +102,40 @@ module cruiseController:
       [
       await On; % First set by On Button
       var heldCruiseSpeed := ?Speed : float in
+        emit CruiseSpeed(heldCruiseSpeed);
         loop
+          pause;
           trap B in
 
             if ?CruiseState = 0 then
               exit B;
             end if;
 
+            present(QuickAccel) then
+              heldCruiseSpeed := heldCruiseSpeed + SpeedInc;
+            end present
+
+            present(QuickAccel) then
+              heldCruiseSpeed = heldCruiseSpeed - SpeedInc;
+            end present
+
             present(Set) then
               heldCruiseSpeed := ?Speed;
             end present;
 
+            if heldCruiseSpeed < SpeedMin then
+              heldCruiseSpeed := SpeedMin;
+            end if
+
+            if heldCruiseSpeed > SpeedMax then
+              heldCruiseSpeed := SpeedMax;
+            end if
+
             emit CruiseSpeed(heldCruiseSpeed);
 
           end trap
-          pause;
         end loop
+      end var
       ]     
       
 
