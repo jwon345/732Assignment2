@@ -17,7 +17,7 @@ module cruiseController:
   output CruiseState : integer; % 0 OFF, 1 ON, 2 STANDBY, 3 DISABLE 
 
 %this is just for temporary testing
-  output IsCruiseControllerOn;
+  output isCruiseControllerOn;
   output moduleRelay;
 
     
