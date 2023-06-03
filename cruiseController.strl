@@ -18,7 +18,7 @@ module cruiseController:
     
   emit CruiseState(0); %init the cruise state to OFF
 
-      loop
+      [loop
         pause;
         trap A in 
 
@@ -64,16 +64,17 @@ module cruiseController:
           end if;
 
           if pre(?CruiseState) = 2 then
-            
-            if ?Brake < PedalsMin then
-              if ?Speed > SpeedMin and ?Speed < SpeedMax and ?Accel < PedalsMin and ?Brake < PedalsMin then
-                emit CruiseState(1); % State Standby -> On
-                exit A;
-              else
-                emit CruiseState(3); % State Standby -> Disable 
-                exit A;
+            present Resume then
+              if ?Brake < PedalsMin then
+                if ?Speed > SpeedMin and ?Speed < SpeedMax and ?Accel < PedalsMin and ?Brake < PedalsMin then
+                  emit CruiseState(1); % State Standby -> On
+                  exit A;
+                else
+                  emit CruiseState(3); % State Standby -> Disable 
+                  exit A;
+                end if;
               end if;
-            end if;
+            end present;
             emit CruiseState(2); 
             exit A;
           end if; 
@@ -96,6 +97,28 @@ module cruiseController:
           end if;
 
         end trap
-      end loop
+      end loop]
+      ||
+      [
+      await On; % First set by On Button
+      var heldCruiseSpeed := ?Speed : float in
+        loop
+          trap B in
+
+            if ?CruiseState = 0 then
+              exit B;
+            end if;
+
+            present(Set) then
+              heldCruiseSpeed := ?Speed;
+            end present;
+
+            emit CruiseSpeed(heldCruiseSpeed);
+
+          end trap
+          pause;
+        end loop
+      ]     
+      
 
 end module
