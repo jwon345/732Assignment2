@@ -16,87 +16,160 @@ module cruiseController:
   output ThrottleCmd : float;
   output CruiseState : integer; % 0 OFF, 1 ON, 2 STANDBY, 3 DISABLE 
 
-%this is just for temporary testing
-  output isCruiseControllerOn;
-  output moduleRelay;
-
+  function regulateThrottle(integer, float, float) : float;
     
-    emit CruiseState(0); %init the cruise state to OFF
-    
-signal AllowCC := 0 : integer, safeTrigger in  % AllowCC 0 =  Disable, 1 = enable , 2 = Break -> standby
-    %Cruise Control System
-    [loop
-	pause;
-        present(Off) then
-          emit CruiseState(0); %cruise controll is off when off is set
-        else
-		if pre(?CruiseState) = 1 then
-		    if pre(?AllowCC) = 2 then
-          emit CruiseState(2); % Standby from brakes
-          await Resume;
-          emit CruiseState(1); % return to on
-		    elsif pre(?AllowCC) = 0 then
-          emit CruiseState(3);
-          await safeTrigger;
-          emit CruiseState(1);
-		    elsif pre(?AllowCC) = 1 then % when curisecontrol is enabled
-		      emit CruiseState(1); % cruise state will be On
-          emit isCruiseControllerOn; % this one feed into the module
-		    end if
-		elsif pre(?CruiseState) = 3 then
-			%?AllowCC = 1;			
-			await safeTrigger;
-			emit CruiseState(1);
-		else	
-		  present(On) then
-		    if ?AllowCC = 1 then
-		      emit CruiseState(1); % cruise state will be On
-          emit isCruiseControllerOn; % this one feed into the module
-		    else
-		      emit CruiseState(3); % cruise state will be Disabled when not meeting requirements
-		    end if
-		  end present
-		end if
-        end present
-      % Button Manager
-    end loop]
-    ||
-    [% state decision looker
-    loop
-	pause;
-	      if ?Brake > PedalsMin then
-		if ?CruiseState = 1 then
-			emit AllowCC(2);
-			await Resume;
-		end if
-	      elsif ?Speed > SpeedMin and ?Speed < SpeedMax and ?Accel < PedalsMin and ?Brake < PedalsMin then
-		emit AllowCC(1);
-		emit safeTrigger;
-	      else
-		emit AllowCC(0); % Disable state
-		if pre(?CruiseState) = 1 then
-			emit CruiseState(3);
-		end if	
-	      end if 
-    end loop
-    ]
-    ||
-    run SpeedController[
-    signal isCruiseControllerOn/ccOn;
-    signal relay/moduleRelay;
-    ]
+  emit CruiseState(0); %init the cruise state to OFF
 
-end signal 
+      [loop
+        pause;
+        trap A in 
+
+          present(Off) then %takes priority over everything
+            emit CruiseState(0); %cruise controll is prioritiesed and sets to 0 
+            exit A;
+          end present;
+
+          if pre(?CruiseState) = 0 then
+            present(On) then % Only switch on from Off
+              emit CruiseState(1); %cruise controll is off when off is set
+              exit A;
+            end present;
+            emit CruiseState(0);
+            exit A;
+          end if;
+
+          if pre(?CruiseState) = 1 then
+            
+            % State On -> standby
+            if (?Brake > PedalsMin) then
+              emit CruiseState(2);
+              exit A;
+            end if; 
+
+            % State On -> Disable 
+            if (?Speed > SpeedMax) then
+              emit CruiseState(3);
+              exit A;
+            end if; 
+            if (?Speed < SpeedMin) then
+              emit CruiseState(3);
+              exit A;
+            end if; 
+            if (?Accel > PedalsMin) then
+              emit CruiseState(3);
+              exit A;
+            end if; 
+
+            emit CruiseState(1); 
+            exit A;
+
+          end if;
+
+          if pre(?CruiseState) = 2 then
+            present Resume then
+              if ?Brake < PedalsMin then
+                if ?Speed > SpeedMin and ?Speed < SpeedMax and ?Accel < PedalsMin and ?Brake < PedalsMin then
+                  emit CruiseState(1); % State Standby -> On
+                  exit A;
+                else
+                  emit CruiseState(3); % State Standby -> Disable 
+                  exit A;
+                end if;
+              end if;
+            end present;
+            emit CruiseState(2); 
+            exit A;
+          end if; 
+
+          if pre(?CruiseState) = 3 then 
+
+            % State Disable -> standby
+            if (?Brake > PedalsMin) then
+              emit CruiseState(2);
+              exit A;
+            end if;
+            
+            if ?Speed > SpeedMin and ?Speed < SpeedMax and ?Accel < PedalsMin and ?Brake < PedalsMin then
+              emit CruiseState(1); % State Disable -> On
+              exit A;
+            end if;
+
+            emit CruiseState(3); 
+            exit A;
+          end if;
+        end trap
+      end loop]
+      ||
+      [
+      await On; % First set by On Button
+      var heldCruiseSpeed := ?Speed : float in
+        emit CruiseSpeed(heldCruiseSpeed);
+        loop
+          pause;
+          trap B in
+
+            if ?CruiseState = 0 then
+              exit B;
+            end if;
+
+            present(QuickAccel) then
+              heldCruiseSpeed := heldCruiseSpeed + SpeedInc;
+            end present;
+
+            present(QuickDecel) then
+              heldCruiseSpeed := heldCruiseSpeed - SpeedInc;
+            end present;
+
+            present(Set) then
+              heldCruiseSpeed := ?Speed;
+            end present;
+
+            if heldCruiseSpeed < SpeedMin then
+              heldCruiseSpeed := SpeedMin;
+            end if;
+
+            if heldCruiseSpeed > SpeedMax then
+              heldCruiseSpeed := SpeedMax;
+            end if;
+
+            emit CruiseSpeed(heldCruiseSpeed);
+
+          end trap
+        end loop
+      end var
+      ]     
+      ||
+      [
+        var previous := 1 : integer in 
+          loop
+              pause;
+              trap C in
+                  if ?CruiseState = 1 then
+                    emit ThrottleCmd(?Accel);
+                    previous := 1;
+                    exit C;
+                  end if;
+
+                  if ((?CruiseState = 2) and (?previous) = 1)) then
+                    emit ThrottleCmd(regulateThrottle(1, ?CruiseSpeed, ?Speed));
+                    previous := 2;
+                    exit C;
+                  end if;
+
+                  if ?CruiseState = 2 then
+                    emit ThrottleCmd(regulateThrottle(0, ?CruiseSpeed, ?Speed));
+                    exit C;
+                  end if;
+
+                  
+                  previous := 1;
+                  emit ThrottleCmd(?Accel);
+                  exit C;
+              end trap
+          end loop
+        end var
+      ]
+      
 
 end module
 
-%this module will call the external C function to control speed.
-module SpeedController:
-input ccOn; 
-input relay; 
-  loop 
-   pause;
-   present ccOn then
-    emit relay;
-  end present
-end module 
