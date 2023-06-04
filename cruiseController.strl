@@ -97,7 +97,6 @@ module cruiseController:
             emit CruiseState(3); 
             exit A;
           end if;
-
         end trap
       end loop]
       ||
@@ -173,3 +172,4 @@ module cruiseController:
       
 
 end module
+
