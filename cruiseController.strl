@@ -14,7 +14,7 @@ module cruiseController:
 
   output CruiseSpeed : float;
   output ThrottleCmd : float;
-  output CruiseState : integer; % 0 OFF, 1 ON, 2 STANDBY, 3 DISABLE 
+  output CruiseState : integer; % 1 OFF, 2 ON, 3 STANDBY, 4 DISABLE 
 
   function regulateThrottle(integer, float, float) : float;
     
@@ -25,76 +25,77 @@ module cruiseController:
         trap A in 
 
           present(Off) then %takes priority over everything
-            emit CruiseState(0); %cruise controll is prioritiesed and sets to 0 
+            emit CruiseState(1); %cruise controll is prioritiesed and sets to 0 
             exit A;
           end present;
 
-          if pre(?CruiseState) = 0 then
+          if pre(?CruiseState) = 1 then
             present(On) then % Only switch on from Off
-              emit CruiseState(1); %cruise controll is off when off is set
+              emit CruiseState(2); %cruise controll is off when off is set
               exit A;
             end present;
-            emit CruiseState(0);
+            emit CruiseState(1);
             exit A;
           end if;
 
-          if pre(?CruiseState) = 1 then
+          if pre(?CruiseState) = 2 then
             
             % State On -> standby
             if (?Brake > PedalsMin) then
-              emit CruiseState(2);
+              emit CruiseState(3);
               exit A;
             end if; 
 
             % State On -> Disable 
             if (?Speed > SpeedMax) then
-              emit CruiseState(3);
+              emit CruiseState(4);
               exit A;
             end if; 
             if (?Speed < SpeedMin) then
-              emit CruiseState(3);
+              emit CruiseState(4);
               exit A;
             end if; 
             if (?Accel > PedalsMin) then
-              emit CruiseState(3);
+              emit CruiseState(4);
               exit A;
             end if; 
 
-            emit CruiseState(1); 
+            %sustaining 
+            emit CruiseState(2); 
             exit A;
 
           end if;
 
-          if pre(?CruiseState) = 2 then
+          if pre(?CruiseState) = 3 then
             present Resume then
               if ?Brake < PedalsMin then
                 if ?Speed > SpeedMin and ?Speed < SpeedMax and ?Accel < PedalsMin and ?Brake < PedalsMin then
-                  emit CruiseState(1); % State Standby -> On
+                  emit CruiseState(2); % State Standby -> On
                   exit A;
                 else
-                  emit CruiseState(3); % State Standby -> Disable 
+                  emit CruiseState(4); % State Standby -> Disable 
                   exit A;
                 end if;
               end if;
             end present;
-            emit CruiseState(2); 
+            emit CruiseState(3); 
             exit A;
           end if; 
 
-          if pre(?CruiseState) = 3 then 
+          if pre(?CruiseState) = 4 then 
 
             % State Disable -> standby
             if (?Brake > PedalsMin) then
-              emit CruiseState(2);
+              emit CruiseState(3);
               exit A;
             end if;
             
             if ?Speed > SpeedMin and ?Speed < SpeedMax and ?Accel < PedalsMin and ?Brake < PedalsMin then
-              emit CruiseState(1); % State Disable -> On
+              emit CruiseState(2); % State Disable -> On
               exit A;
             end if;
 
-            emit CruiseState(3); 
+            emit CruiseState(4); 
             exit A;
           end if;
         end trap
@@ -108,10 +109,12 @@ module cruiseController:
           pause;
           trap B in
 
-            if ?CruiseState = 0 then
+            %Break if state is off
+            if ?CruiseState = 1 then
               exit B;
             end if;
 
+            %button press management
             present(QuickAccel) then
               heldCruiseSpeed := heldCruiseSpeed + SpeedInc;
             end present;
@@ -124,6 +127,7 @@ module cruiseController:
               heldCruiseSpeed := ?Speed;
             end present;
 
+            %speed managements --> upper lower limits
             if heldCruiseSpeed < SpeedMin then
               heldCruiseSpeed := SpeedMin;
             end if;
@@ -132,6 +136,7 @@ module cruiseController:
               heldCruiseSpeed := SpeedMax;
             end if;
 
+            %sustaining speed if not off
             emit CruiseSpeed(heldCruiseSpeed);
 
           end trap
@@ -144,12 +149,14 @@ module cruiseController:
           loop
               pause;
               trap C in
+                  % State is Off --> Throttle is controlled by Accel
                   if ?CruiseState = 1 then
                     emit ThrottleCmd(?Accel);
                     previous := 1;
                     exit C;
                   end if;
 
+                  %Cruise control is on --> Controlled by controller.
                   if ((?CruiseState = 2) and (?previous) = 1)) then
                     emit ThrottleCmd(regulateThrottle(1, ?CruiseSpeed, ?Speed));
                     previous := 2;
@@ -161,10 +168,10 @@ module cruiseController:
                     exit C;
                   end if;
 
-                  
+                  %check flag to notifify speed not held.
                   previous := 1;
-                  emit ThrottleCmd(?Accel);
                   exit C;
+
               end trap
           end loop
         end var
