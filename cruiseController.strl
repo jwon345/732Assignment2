@@ -18,7 +18,7 @@ module cruiseController:
 
   function regulateThrottle(integer, float, float) : float;
     
-  emit CruiseState(0); %init the cruise state to OFF
+  emit CruiseState(1); %init the cruise state to OFF
 
       [loop
         pause;
@@ -157,7 +157,7 @@ module cruiseController:
                   end if;
 
                   %Cruise control is on --> Controlled by controller.
-                  if ((?CruiseState = 2) and (?previous) = 1)) then
+                  if ((?CruiseState = 2) and (previous = 1)) then
                     emit ThrottleCmd(regulateThrottle(1, ?CruiseSpeed, ?Speed));
                     previous := 2;
                     exit C;
